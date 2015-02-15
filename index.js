@@ -347,7 +347,14 @@ function tinf_uncompress(source, dest) {
 
   } while (!bfinal);
 
-  return d.dest.slice(0, d.destLen);
+  if (d.destLen < d.dest.length) {
+    if (typeof d.dest.slice === 'function')
+      return d.dest.slice(0, d.destLen);
+    else
+      return d.dest.subarray(0, d.destLen);
+  }
+  
+  return d.dest;
 }
 
 /* -------------------- *

@@ -60,9 +60,16 @@ describe('tiny-inflate', function() {
     assert.deepEqual(out, uncompressed);
   });
   
-  it('should handle uncompressed blocks', function() {
+  it('should handle fixed huffman blocks', function() {
     var out = new Buffer(uncompressed.length);
     inflate(fixed, out);
     assert.deepEqual(out, uncompressed);
+  });
+  
+  it('should handle typed arrays', function() {
+    var input = new Uint8Array(compressed);
+    var out = new Uint8Array(uncompressed.length);
+    inflate(input, out);
+    assert.deepEqual(out, new Uint8Array(uncompressed));
   });
 });
