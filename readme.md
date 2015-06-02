@@ -2,7 +2,7 @@
 
 This is a port of Joergen Ibsen's [tiny inflate](https://bitbucket.org/jibsen/tinf) to JavaScript.
 Minified it is about 3KB, or 1.3KB gzipped. While being very small, it is also reasonably fast
-(about 30% - 50% slower than [pako](https://github.com/nodeca/pako) on average), and should be 
+(about 30% - 50% slower than [pako](https://github.com/nodeca/pako) on average), and should be
 good enough for many applications. If you need the absolute best performance, however, you'll
 need to use a larger library such as pako that contains additional optimizations.
 
@@ -25,6 +25,14 @@ var outputBuffer = new Buffer(decompressedSize);
 
 inflate(compressedBuffer, outputBuffer);
 ```
+
+## Deflation should not contain headers
+To keep the code as small as possible, it is assumed that the compressed data does not contain a
+header. Typically, Zlib clients will add a header giving details about the compressed data, however
+such headers will cause `tiny-inflate` to fail.
+
+For example, you can deflate without headers in Ruby with something like;
+`compressed = Zlib::Deflate.new(nil, -Zlib::MAX_WBITS).deflate(data_to_compress, Zlib::FINISH)`
 
 ## License
 
