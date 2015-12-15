@@ -314,7 +314,7 @@ function tinf_inflate_uncompressed_block(d) {
 /* inflate stream from source to dest */
 function tinf_uncompress(source, dest) {
   var d = new Data(source, dest);
-  var bfinal, res;
+  var bfinal, btype, res;
 
   do {
     /* read final block flag */
