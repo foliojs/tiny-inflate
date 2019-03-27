@@ -1,4 +1,4 @@
-var inflate = require('../');
+var inflate = require('../build/index.js').default;
 var zlib = require('zlib');
 var fs = require('fs');
 var assert = require('assert');

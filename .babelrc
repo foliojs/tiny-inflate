@@ -1,0 +1,20 @@
+{
+  "compact": "false",
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "node": "3.0"
+        }
+      }
+    ]
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        "istanbul"
+      ]
+    }
+  }
+}

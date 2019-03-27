@@ -2,9 +2,13 @@
   "name": "tiny-inflate",
   "version": "1.0.2",
   "description": "A tiny inflate implementation",
-  "main": "index.js",
+  "main": "./build/index.js",
+  "jsnext:main": "./src/index.js",
+  "module": "./src/index.js",
   "scripts": {
-    "test": "mocha"
+    "build": "babel src --compact=false --out-dir build --source-maps",
+    "prepublishOnly": "npm run build",
+    "test": "cross-env NODE_ENV=test nyc  mocha"
   },
   "repository": {
     "type": "git",
@@ -23,6 +27,12 @@
   },
   "homepage": "https://github.com/devongovett/tiny-inflate",
   "devDependencies": {
+    "babel-cli": "latest",
+    "babel-plugin-istanbul": "latest",
+    "babel-preset-env": "latest",
+    "cross-env": "latest",
+    "babel-register": "latest",
+    "nyc": "latest",
     "mocha": "^2.1.0"
   }
 }
