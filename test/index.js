@@ -5,7 +5,7 @@ var assert = require('assert');
 var uncompressed = fs.readFileSync(__dirname + '/lorem.txt');
 
 describe('tiny-inflate', function() {
-  var compressed, noCompression, fixed;
+  var compressed, noCompression, fixed, zlibCompressed, gzipped;
   
   function deflate(buf, options, fn) {    
     var chunks = [];
@@ -37,6 +37,20 @@ describe('tiny-inflate', function() {
   before(function(done) {
     deflate(uncompressed, { strategy: zlib.Z_FIXED }, function(err, data) {
       fixed = data;
+      done();
+    });
+  });
+
+  before(function(done) {
+    zlib.deflate(uncompressed, function(err, data) {
+      zlibCompressed = data;
+      done();
+    });
+  });
+
+  before(function(done) {
+    zlib.gzip(uncompressed, function(err, data) {
+      gzipped = data;
       done();
     });
   });
@@ -72,4 +86,30 @@ describe('tiny-inflate', function() {
     inflate(input, out);
     assert.deepEqual(out, new Uint8Array(uncompressed));
   });
+
+  it('should handle no output array', function() {
+    var out = inflate(compressed);
+    assert.deepEqual(out, new Uint8Array(uncompressed));
+  })
+
+  it('should handle gzip', function() {
+    var out = Buffer.alloc(uncompressed.length);
+    inflate(gzipped, out);
+    assert.deepEqual(out, uncompressed);
+  });
+
+  it('should handle zlib', function() {
+    var out = Buffer.alloc(uncompressed.length);
+    inflate(zlibCompressed, out);
+    assert.deepEqual(out, uncompressed);
+  })
+
+  it('should autodetect format', function() {
+    var outGzip = inflate(gzipped);
+    assert.deepEqual(outGzip, uncompressed);
+    var outZlib = inflate(zlibCompressed);
+    assert.deepEqual(outZlib, uncompressed);
+    var outDeflate = inflate(compressed);
+    assert.deepEqual(outDeflate, uncompressed);
+  })
 });
