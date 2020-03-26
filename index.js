@@ -311,8 +311,21 @@ function tinf_inflate_uncompressed_block(d) {
   return TINF_OK;
 }
 
+/* read an integer from a byte array in little-endian order */
+function tinf_readle(source, start, len) {
+  var res = 0;
+  for (var i = 0; i < len; ++i) {
+    var dat = source[start + i];
+    /* verify in bounds */
+    if (typeof dat === 'undefined')
+      throw new Error('out of bounds');
+    res += dat << (8 * i);
+  }
+  return res;
+}
+
 /* inflate stream from source to dest */
-function tinf_uncompress(source, dest) {
+function tinf_inflate_base(source, dest) {
   var d = new Data(source, dest);
   var bfinal, btype, res;
 
@@ -356,6 +369,100 @@ function tinf_uncompress(source, dest) {
   
   return d.dest;
 }
+
+/**
+ * Decompresses deflate data. Similar to `pako.inflateRaw()`
+ * @param {Uint8Array} source The deflate data
+ * @param {Uint8Array} [dest] Where to copy the uncompressed data to. If none
+ *                            is provided, a new Uint8Array will be returned.
+ *                            If the decompressed size is known, passing in an
+ *                            empty Uint8Array of that size reduces memory
+ *                            usage.
+ * @returns {Uint8Array} The original data
+ */
+function tinf_inflate(source, dest) {
+  if (dest)
+    return tinf_inflate_base(source, dest);
+  return new Uint8Array(tinf_inflate_base(source, []));
+}
+
+/**
+ * Decompresses gzip data. Similar to `pako.ungzip()`
+ * @param {Uint8Array} source The gzip data
+ * @param {Uint8Array} [dest] Where to copy the uncompressed data to. If none
+ *                            is provided, a new Uint8Array will be returned.
+ *                            If the decompressed size is known, passing in an
+ *                            empty Uint8Array of that size reduces memory
+ *                            usage.
+ * @returns {Uint8Array} The original data
+ */
+function tinf_gunzip(source, dest) {
+  var len = source.length;
+  if (len < 18 || source[0] !== 31 || source[1] !== 139 || source[2] !== 8)
+    throw new Error('invalid gzip data');
+  var flg = source[3];
+  var start = 10;
+  if (flg & 4) {
+    try { start += tinf_readle(source, start, 2) + 2; }
+    catch(e) { throw new Error('invalid gzip data'); }
+  }
+  /* skip FNAME, FCOMMENT (0 terminated) */
+  for (var zs = (flg >> 3 & 1) + (flg >> 4 & 1); zs > 0; zs -= (source[start++] === 0)) {}
+  /* skip 2 bytes if FHCRC */
+  start += flg & 2;
+  if (!dest) {
+    /* use header-provided size */
+    dest = new Uint8Array(tinf_readle(source, len - 4, 4));
+  }
+  return tinf_inflate_base(source.subarray(start, len - 8), dest);
+}
+
+/**
+ * Decompresses zlib data. Similar to `pako.inflate()`
+ * @param {Uint8Array} source The zlib data
+ * @param {Uint8Array} [dest] Where to copy the uncompressed data to. If none
+ *                            is provided, a new Uint8Array will be returned.
+ *                            If the decompressed size is known, passing in an
+ *                            empty Uint8Array of that size reduces memory
+ *                            usage.
+ * @returns {Uint8Array} The original data
+ */
+function tinf_decompress(source, dest) {
+  var len = source.length;
+  if (len < 6 || source[0] & 15 !== 8 || source[0] >> 4 > 7)
+    throw new Error('invalid zlib data');
+  if (source[1] & 32)
+    throw new Error('invalid zlib data: dictionaries not supported');
+  return tinf_inflate(source.subarray(2, -4), dest);
+}
+
+/**
+ * Decompresses deflate/gzip/zlib data. If format autodetection fails, try
+ * `inflate.inflate()`, `inflate.gunzip()`, and `inflate.decompress()`.
+ * @param {Uint8Array} source The deflate/gzip/zlib data
+ * @param {Uint8Array} [dest] Where to copy the uncompressed data to. If none
+ *                            is provided, a new Uint8Array will be returned.
+ *                            If the decompressed size is known, passing in an
+ *                            empty Uint8Array of that size reduces memory
+ *                            usage.
+ * @returns {Uint8Array} The original data
+ */
+function tinf_uncompress(source, dest) {
+  if (source[0] === 31 && source[1] === 139) {
+    /* data is gzipped */
+    return tinf_gunzip(source, dest);
+  }
+  if (source[0] & 15 !== 8 || source[0] >> 4 > 7) {
+    /* data cannot be zlib, assume deflate */
+    return tinf_inflate(source, dest);
+  }
+  /* data should be zlib - in rare cases can still be deflate */
+  return tinf_decompress(source, dest);
+}
+
+tinf_uncompress.inflate = tinf_inflate;
+tinf_uncompress.gunzip = tinf_gunzip;
+tinf_uncompress.decompress = tinf_decompress;
 
 /* -------------------- *
  * -- initialization -- *
