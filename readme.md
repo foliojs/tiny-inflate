@@ -19,7 +19,7 @@ Input and output buffers can be either node `Buffer`s, or `Uint8Array`s.
 ```javascript
 var inflate = require('tiny-inflate');
 
-var compressedBuffer = new Bufer([ ... ]);
+var compressedBuffer = new Buffer([ ... ]);
 var decompressedSize = ...;
 var outputBuffer = new Buffer(decompressedSize);
 
